@@ -36,19 +36,19 @@ const TABS = [
     icon: Armchair,
   },
   {
+    id: "result",
+    label: "Kết quả bốc thăm",
+    icon: ClipboardList,
+  },
+  {
     id: "topic",
-    label: "Bốc đề thi chuẩn bị dự thảo nghị quyết",
+    label: "Bốc đề thi\nchuẩn bị dự thảo nghị quyết",
     icon: FileText,
   },
   {
     id: "question",
-    label: "Bốc phiếu câu hỏi",
+    label: "Bốc đề thi\nphần thi nhận thức",
     icon: HelpCircle,
-  },
-  {
-    id: "result",
-    label: "Kết quả bốc thăm",
-    icon: ClipboardList,
   },
 ] as const;
 
@@ -86,8 +86,8 @@ function Index() {
                     : "text-foreground/70 hover:bg-red-50"
                   }`}
               >
-                <Icon className="h-4 w-4" />
-                <span className="hidden sm:inline">
+                <Icon className="h-4 w-4 shrink-0" />
+                <span className="hidden sm:inline text-center whitespace-pre-line leading-tight">
                   {t.label}
                 </span>
               </button>
