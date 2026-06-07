@@ -23,10 +23,14 @@ export function TopicDrawSection() {
 
   const available = data.contestants.filter(
     (c) =>
-      (c.stt === 1 || c.stt === 20) &&
+      (c.stt === 1 || c.stt === 21) &&
       !drawnIds.has(c.id)
   );
   const handleDraw = () => {
+    if (!isAdmin) {
+      toast.error("Bạn phải đăng nhập tài khoản quản trị (Admin) để thực hiện bốc thăm!");
+      return;
+    }
     const c = data.contestants.find((x) => x.id === contestantId);
 
     if (!c) {
@@ -66,10 +70,10 @@ export function TopicDrawSection() {
         const relatedContestants =
           c.stt === 1
             ? data.contestants.filter(
-              (x) => x.stt >= 1 && x.stt <= 19
+              (x) => x.stt >= 1 && x.stt <= 20
             )
             : data.contestants.filter(
-              (x) => x.stt >= 20 && x.stt <= 21
+              (x) => x.stt >= 21 && x.stt <= 24
             );
 
         // Gán đề cho toàn bộ nhóm
@@ -98,7 +102,7 @@ export function TopicDrawSection() {
         setContestantId("");
 
         toast.success(
-          `${c.rank} ${c.name} đại diện nhóm ${c.stt === 1 ? "1-19" : "20-21"
+          `${c.rank} ${c.name} đại diện nhóm ${c.stt === 1 ? "1-20" : "21-24"
           } bốc được Đề ${finalPick + 1}`
         );
       }
@@ -112,6 +116,7 @@ export function TopicDrawSection() {
       <CardHeader className="space-y-1">
         <CardTitle className="flex items-center justify-between">
           <span className="flex items-center gap-2"><FileText className="text-primary" /> Bốc đề thi chuẩn bị dự thảo nghị quyết</span>
+          
           {isAdmin && (
             <Button size="sm" variant="ghost" onClick={() => { if (confirm("Xoá lịch sử bốc đề?")) resetTopicDraws(); }}>
               <Trash2 className="text-destructive" />
@@ -171,8 +176,8 @@ export function TopicDrawSection() {
                   {available.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
                       {c.stt === 1
-                        ? `${c.rank} ${c.name} (Đại diện STT 1-19)`
-                        : `${c.rank} ${c.name} (Đại diện STT 20-21)`}
+                        ? `${c.rank} ${c.name} (Đại diện nhóm đối tượng 1)`
+                        : `${c.rank} ${c.name} (Đại diện nhóm đối tượng 2)`}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -204,9 +209,11 @@ export function TopicDrawSection() {
                     </div>
                   </motion.div>
                 ) : (
-                  <div className="text-center text-muted-foreground">
-                    <FileText className="mx-auto mb-2 h-10 w-10 opacity-40" />
-                    Chọn người thi và nhấn "Bốc đề"
+                  <div className="text-center p-4">
+                    <FileText className="mx-auto mb-3 h-12 w-12 text-primary/50 animate-pulse" />
+                    <p className="font-bold text-base md:text-lg text-primary/90 tracking-wide">
+                      Nhấn chọn người thi, sau đó nhấn "Bốc đề"
+                    </p>
                   </div>
                 )}
               </AnimatePresence>

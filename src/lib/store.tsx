@@ -161,6 +161,7 @@ interface Ctx {
   resetTableDraws: () => void;
   resetTopicDraws: () => void;
   resetQuestionDraws: () => void;
+  importDraws: (tableDraws: TableDrawRecord[], topicDraws: TopicDrawRecord[], questionDraws: QuestionDrawRecord[]) => Promise<void>;
 }
 
 const StoreContext = createContext<Ctx | null>(null);
@@ -326,11 +327,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }
     },
     resetTableDraws: async () => {
-      update({ tableDraws: [] });
+      update({ tableDraws: [], questionDraws: [] });
       if (supabase) {
         try {
-          const { error } = await supabase.from("table_draws").delete().neq("id", "");
-          if (error) throw error;
+          const { error: tableError } = await supabase.from("table_draws").delete().neq("id", "");
+          if (tableError) throw tableError;
+          const { error: questionError } = await supabase.from("question_draws").delete().neq("id", "");
+          if (questionError) throw questionError;
         } catch (err: any) {
           toast.error("Lỗi đồng bộ Supabase: " + err.message);
         }
@@ -355,6 +358,42 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           if (error) throw error;
         } catch (err: any) {
           toast.error("Lỗi đồng bộ Supabase: " + err.message);
+        }
+      }
+    },
+    importDraws: async (tableDraws, topicDraws, questionDraws) => {
+      setData((d) => ({
+        ...d,
+        tableDraws,
+        topicDraws,
+        questionDraws
+      }));
+      if (supabase) {
+        try {
+          // Delete existing draws
+          await Promise.all([
+            supabase.from("table_draws").delete().neq("id", ""),
+            supabase.from("topic_draws").delete().neq("id", ""),
+            supabase.from("question_draws").delete().neq("id", "")
+          ]);
+          // Insert new draws if any
+          const promises = [];
+          if (tableDraws.length > 0) {
+            promises.push(supabase.from("table_draws").insert(tableDraws.map(mapTableDrawToDb)));
+          }
+          if (topicDraws.length > 0) {
+            promises.push(supabase.from("topic_draws").insert(topicDraws.map(mapTopicDrawToDb)));
+          }
+          if (questionDraws.length > 0) {
+            promises.push(supabase.from("question_draws").insert(questionDraws.map(mapQuestionDrawToDb)));
+          }
+          if (promises.length > 0) {
+            const results = await Promise.all(promises);
+            const err = results.find(r => r.error);
+            if (err) throw err.error;
+          }
+        } catch (err: any) {
+          toast.error("Lỗi đồng bộ Supabase khi nhập Excel: " + err.message);
         }
       }
     },

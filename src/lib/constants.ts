@@ -23,18 +23,22 @@ export const DEFAULT_CONTESTANTS: Contestant[] = [
   { id: "c-7", stt: 7, name: "Nguyễn Văn Thái", rank: "Đại úy", position: "BTCB", unit: "c6/d2", group: 1 },
   { id: "c-8", stt: 8, name: "Phạm Ngọc Hải", rank: "Đại úy", position: "BTCB", unit: "c7/d2", group: 1 },
   { id: "c-9", stt: 9, name: "Lê Trung Nghĩa", rank: "Trung úy", position: "BTCB", unit: "c8/d2", group: 1 },
-  { id: "c-10", stt: 10, name: "Hồ Ngọc Hùng", rank: "Đại úy", position: "BTCB", unit: "dbộ/d2", group: 2 },
-  { id: "c-11", stt: 11, name: "Lâm Minh Tài", rank: "Thượng úy", position: "BTCB", unit: "c9/d3", group: 2 },
-  { id: "c-12", stt: 12, name: "Nguyễn Đức Hải Dương", rank: "Thượng úy", position: "BTCB", unit: "c10/d3", group: 2 },
-  { id: "c-13", stt: 13, name: "Nguyễn Lương Thế", rank: "Thượng úy", position: "BTCB", unit: "c11/d3", group: 2 },
-  { id: "c-14", stt: 14, name: "Đặng Văn Học", rank: "Thượng úy", position: "BTCB", unit: "c12/d3", group: 2 },
-  { id: "c-15", stt: 15, name: "Phạm Đình Phong", rank: "Thiếu tá", position: "BTCB", unit: "dbộ/d3", group: 2 },
-  { id: "c-16", stt: 16, name: "Nguyễn Duy Khanh", rank: "Đại úy", position: "BTCB", unit: "c14", group: 2 },
-  { id: "c-17", stt: 17, name: "Trần Quốc Lương", rank: "Thượng úy", position: "BTCB", unit: "c18", group: 2 },
-  { id: "c-18", stt: 18, name: "Lê Văn Tú", rank: "Thượng úy", position: "BTCB", unit: "c19", group: 2 },
-  { id: "c-19", stt: 19, name: "Lê Công Toàn", rank: "Đại úy", position: "BTCB", unit: "c20", group: 2 },
-  { id: "c-20", stt: 20, name: "Mai Xuân Nam", rank: "Thiếu tá", position: "BTCB", unit: "c24", group: 2 },
-  { id: "c-21", stt: 21, name: "Nguyễn Cảnh Toàn", rank: "Thiếu tá", position: "BTCB", unit: "c25", group: 2 },
+  { id: "c-10", stt: 10, name: "Hồ Ngọc Hùng", rank: "Đại úy", position: "BTCB", unit: "dbộ/d2", group: 1 },
+  { id: "c-11", stt: 11, name: "Lâm Minh Tài", rank: "Thượng úy", position: "BTCB", unit: "c9/d3", group: 1 },
+  { id: "c-12", stt: 12, name: "Nguyễn Đức Hải Dương", rank: "Thượng úy", position: "BTCB", unit: "c10/d3", group: 1 },
+  { id: "c-13", stt: 13, name: "Nguyễn Lương Thế", rank: "Thượng úy", position: "BTCB", unit: "c11/d3", group: 1 },
+  { id: "c-14", stt: 14, name: "Đặng Văn Học", rank: "Thượng úy", position: "BTCB", unit: "c12/d3", group: 1 },
+  { id: "c-15", stt: 15, name: "Phạm Đình Phong", rank: "Thiếu tá", position: "BTCB", unit: "dbộ/d3", group: 1 },
+  { id: "c-16", stt: 16, name: "Nguyễn Duy Khanh", rank: "Đại úy", position: "BTCB", unit: "c14", group: 1 },
+  { id: "c-17", stt: 18, name: "Phạm Văn Tạo", rank: "Thiếu tá", position: "P.BTCB", unit: "c17", group: 1 },
+  { id: "c-18", stt: 17, name: "Trần Quốc Lương", rank: "Thượng úy", position: "BTCB", unit: "c18", group: 1 },
+  { id: "c-19", stt: 19, name: "Lê Văn Tú", rank: "Thượng úy", position: "BTCB", unit: "c19", group: 1 },
+  { id: "c-20", stt: 20, name: "Lê Công Toàn", rank: "Đại úy", position: "BTCB", unit: "c20", group: 1 },
+  { id: "c-21", stt: 21, name: "Mai Xuân Nam", rank: "Thiếu tá", position: "BTCB", unit: "c24", group: 2 },
+  { id: "c-22", stt: 22, name: "Nguyễn Cảnh Toàn", rank: "Thiếu tá", position: "BTCB", unit: "c25", group: 2 },
+  { id: "c-23", stt: 23, name: "Nguyễn Văn Biển", rank: "Trung tá", position: "BTCB", unit: "BTM", group: 2 },
+  { id: "c-24", stt: 24, name: "Đỗ Trọng An", rank: "Trung tá", position: "P.BTCB", unit: "BHC-KT", group: 2 },
+
 ];
 
 export const DEFAULT_QUESTIONS: QuestionItem[] = [
@@ -200,4 +204,4 @@ Câu 2: Trên cương vị, chức trách nhiệm vụ được giao đồng ch�
   },
 ];
 
-export const TABLE_TURNS: Record<1 | 2, number> = { 1: 10, 2: 11 };
+export const TABLE_TURNS: Record<1 | 2, number> = { 1: 12, 2: 12 };

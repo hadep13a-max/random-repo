@@ -35,6 +35,10 @@ export function TableDrawSection() {
   }, [usedSlots]);
 
   const handleDraw = () => {
+    if (!isAdmin) {
+      toast.error("Bạn phải đăng nhập tài khoản quản trị (Admin) để thực hiện bốc thăm!");
+      return;
+    }
     const c = data.contestants.find((x) => x.id === contestantId);
     if (!c) { toast.error("Hãy chọn người thi"); return; }
     if (drawnIds.has(c.id)) { toast.error("Người này đã bốc bàn rồi"); return; }
@@ -45,7 +49,22 @@ export function TableDrawSection() {
     const start = performance.now();
     const tick = () => {
       const elapsed = performance.now() - start;
-      const pick = freeSlots[Math.floor(Math.random() * freeSlots.length)];
+      
+      let activeSlots = freeSlots;
+      if (c.stt === 23 || c.stt === 24) {
+        activeSlots = freeSlots.filter((s) => s.table === 1 && (s.turn === 11 || s.turn === 12));
+      } else if (c.stt === 17) {
+        activeSlots = freeSlots.filter((s) => s.table === 2 && s.turn === 12);
+      } else {
+        activeSlots = freeSlots.filter(
+          (s) =>
+            !(s.table === 1 && (s.turn === 11 || s.turn === 12)) &&
+            !(s.table === 2 && s.turn === 12)
+        );
+      }
+      if (activeSlots.length === 0) activeSlots = freeSlots;
+
+      const pick = activeSlots[Math.floor(Math.random() * activeSlots.length)];
       setResult({ table: pick.table, turn: pick.turn, name: c.name, rank: c.rank });
       if (elapsed < 1400) {
         setTimeout(tick, 70 + elapsed / 20);
@@ -55,13 +74,26 @@ export function TableDrawSection() {
         const count2 = data.tableDraws.filter((d) => d.table === 2).length;
 
         let candidateSlots = freeSlots;
-        if (count1 - count2 >= 3) {
-          const t2Slots = freeSlots.filter((s) => s.table === 2);
-          if (t2Slots.length > 0) candidateSlots = t2Slots;
-        } else if (count2 - count1 >= 3) {
-          const t1Slots = freeSlots.filter((s) => s.table === 1);
-          if (t1Slots.length > 0) candidateSlots = t1Slots;
+        if (c.stt === 23 || c.stt === 24) {
+          candidateSlots = freeSlots.filter((s) => s.table === 1 && (s.turn === 11 || s.turn === 12));
+        } else if (c.stt === 17) {
+          candidateSlots = freeSlots.filter((s) => s.table === 2 && s.turn === 12);
+        } else {
+          candidateSlots = freeSlots.filter(
+            (s) =>
+              !(s.table === 1 && (s.turn === 11 || s.turn === 12)) &&
+              !(s.table === 2 && s.turn === 12)
+          );
+          if (count1 - count2 >= 3) {
+            const t2Slots = candidateSlots.filter((s) => s.table === 2);
+            if (t2Slots.length > 0) candidateSlots = t2Slots;
+          } else if (count2 - count1 >= 3) {
+            const t1Slots = candidateSlots.filter((s) => s.table === 1);
+            if (t1Slots.length > 0) candidateSlots = t1Slots;
+          }
         }
+
+        if (candidateSlots.length === 0) candidateSlots = freeSlots;
 
         const finalPick = candidateSlots[Math.floor(Math.random() * candidateSlots.length)];
         const record = {
@@ -101,13 +133,18 @@ const table2Draws = useMemo(
   [data.tableDraws]
 );
 
-  const HistoryTable = ({ tableNum, draws }: { tableNum: 1 | 2; draws: typeof data.tableDraws }) => (
-    <div className="flex flex-col rounded-lg border bg-card">
-      <div className="border-b bg-secondary/50 px-3 py-2">
-        <h5 className="text-sm font-semibold text-foreground/80">
-          Bàn {tableNum} <span className="text-muted-foreground">({draws.length}/{TABLE_TURNS[tableNum]})</span>
-        </h5>
-      </div>
+  const HistoryTable = ({ tableNum, draws }: { tableNum: 1 | 2; draws: typeof data.tableDraws }) => {
+    const tableName = tableNum === 1
+      ? "Bàn 1 - Hội trường Trung đoàn"
+      : "Bàn 2 - Phòng Hồ Chí Minh Tiểu đoàn 2";
+
+    return (
+      <div className="flex flex-col rounded-lg border bg-card">
+        <div className="border-b bg-secondary/50 px-3 py-2">
+          <h5 className="text-sm font-semibold text-foreground/80">
+            {tableName} <span className="text-muted-foreground">({draws.length}/{TABLE_TURNS[tableNum]})</span>
+          </h5>
+        </div>
       <div className="max-h-[500px] overflow-auto flex-1">
         <table className="w-full text-xs">
           <thead className="sticky top-0 bg-secondary/80 backdrop-blur">
@@ -135,6 +172,7 @@ const table2Draws = useMemo(
       </div>
     </div>
   );
+};
 
   return (
     <Card className="shadow-elegant border-primary/10">
@@ -142,12 +180,12 @@ const table2Draws = useMemo(
         <CardTitle className="flex items-center justify-between">
           <span className="flex items-center gap-2"><Armchair className="text-primary" /> Bốc bàn thi & lượt thi</span>
           {isAdmin && (
-            <Button size="sm" variant="ghost" onClick={() => { if (confirm("Xoá toàn bộ lịch sử bốc bàn?")) resetTableDraws(); }}>
+            <Button size="sm" variant="ghost" onClick={() => { if (confirm("Xoá toàn bộ lịch sử bốc bàn và bốc câu hỏi?")) resetTableDraws(); }}>
               <Trash2 className="text-destructive" />
             </Button>
           )}
         </CardTitle>
-        <p className="text-xs text-muted-foreground">Áp dụng cho tất cả thí sinh để phân bổ bàn thi và lượt thi ngẫu nhiên (chênh lệch giữa các bàn tối đa 3 thí sinh).</p>
+        <p className="text-xs text-muted-foreground">Áp dụng cho tất cả thí sinh để phân bổ bàn thi và lượt thi ngẫu nhiên.</p>
       </CardHeader>
       <CardContent>
 <div className="grid gap-6 lg:grid-cols-[0.8fr_1.6fr]">          {/* Left side - Draw interface */}
@@ -193,9 +231,11 @@ const table2Draws = useMemo(
                     </div>
                   </motion.div>
                 ) : (
-                  <div className="text-center text-muted-foreground">
-                    <Armchair className="mx-auto mb-2 h-10 w-10 opacity-40" />
-                    Chọn người thi và nhấn "Bốc thăm"
+                  <div className="text-center p-4">
+                    <Armchair className="mx-auto mb-3 h-12 w-12 text-primary/50 animate-pulse" />
+                    <p className="font-bold text-base md:text-lg text-primary/90 tracking-wide">
+                      Nhấn chọn người thi, sau đó nhấn "Bốc thăm"
+                    </p>
                   </div>
                 )}
               </AnimatePresence>
@@ -210,7 +250,7 @@ const table2Draws = useMemo(
         </div>
 
         <div className="mt-4 flex justify-center text-xs text-muted-foreground">
-          Tổng cộng: {data.tableDraws.length}/21
+          Tổng cộng: {data.tableDraws.length}/{data.contestants.length}
         </div>
       </CardContent>
     </Card>

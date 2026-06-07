@@ -55,6 +55,10 @@ const filteredHistoryDraws = useMemo(() => {
 }, [data.questionDraws, data.tableDraws, tableFilter]);
 
   const handleDraw = () => {
+    if (!isAdmin) {
+      toast.error("Bạn phải đăng nhập tài khoản quản trị (Admin) để thực hiện bốc thăm!");
+      return;
+    }
   const c = data.contestants.find(
     (x) => x.id === contestantId
   );
@@ -285,9 +289,11 @@ const filteredHistoryDraws = useMemo(() => {
                    
                   </motion.div>
                 ) : (
-                  <div className="text-center text-muted-foreground">
-                    <HelpCircle className="mx-auto mb-2 h-10 w-10 opacity-40" />
-                    Chọn tên và nhấn "Bắt đầu quay"
+                  <div className="text-center p-4">
+                    <HelpCircle className="mx-auto mb-3 h-12 w-12 text-primary/50 animate-pulse" />
+                    <p className="font-bold text-base md:text-lg text-primary/90 tracking-wide">
+                      Nhấn chọn tên người thi, sau đó nhấn "Bắt đầu quay"
+                    </p>
                   </div>
                 )}
               </AnimatePresence>
