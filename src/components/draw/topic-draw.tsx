@@ -102,7 +102,7 @@ export function TopicDrawSection() {
         setContestantId("");
 
         toast.success(
-          `${c.rank} ${c.name} đại diện nhóm ${c.stt === 1 ? "1-20" : "21-24"
+          `${c.rank} ${c.name} đại diện nhóm ${c.stt === 1 ? "đối tượng 1" : "đối tượng 2"
           } bốc được Đề ${finalPick + 1}`
         );
       }
