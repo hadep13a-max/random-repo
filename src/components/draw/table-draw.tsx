@@ -55,6 +55,8 @@ export function TableDrawSection() {
         activeSlots = freeSlots.filter((s) => s.table === 1 && (s.turn === 11 || s.turn === 12));
       } else if (c.stt === 17) {
         activeSlots = freeSlots.filter((s) => s.table === 2 && s.turn === 12);
+      } else if (c.stt === 2) {
+        activeSlots = freeSlots.filter((s) => s.turn >= 5 && s.turn <= 8);
       } else {
         activeSlots = freeSlots.filter(
           (s) =>
@@ -78,6 +80,8 @@ export function TableDrawSection() {
           candidateSlots = freeSlots.filter((s) => s.table === 1 && (s.turn === 11 || s.turn === 12));
         } else if (c.stt === 17) {
           candidateSlots = freeSlots.filter((s) => s.table === 2 && s.turn === 12);
+        } else if (c.stt === 2) {
+          candidateSlots = freeSlots.filter((s) => s.turn >= 5 && s.turn <= 8);
         } else {
           candidateSlots = freeSlots.filter(
             (s) =>
