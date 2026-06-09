@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Lock, Users, ListChecks, Plus, Trash2, Pencil, Save, X } from "lucide-react";
+import { Lock, Users, ListChecks, Plus, Trash2, Pencil, Save, X, Settings, Shuffle } from "lucide-react";
 import { useStore } from "@/lib/store";
 import type { Contestant, QuestionItem, GroupId } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin")({
@@ -17,7 +18,7 @@ export const Route = createFileRoute("/admin")({
 });
 
 function AdminPage() {
-  const { isAdmin, login } = useStore();
+  const { data, isAdmin, login, setRandomTopic, setRandomQuestion } = useStore();
   const [u, setU] = useState("");
   const [p, setP] = useState("");
 
@@ -56,12 +57,27 @@ function AdminPage() {
 
   return (
     <main className="mx-auto max-w-6xl space-y-6 px-4 py-8">
-      <h1 className="text-2xl font-bold">Bảng điều khiển quản trị</h1>
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <h1 className="text-2xl font-bold">Bảng điều khiển quản trị</h1>
+        <div className="flex items-center gap-2 pr-2">
+          <Switch
+            checked={data.randomTopic}
+            onCheckedChange={setRandomTopic}
+            className="scale-75 opacity-30 hover:opacity-100 transition cursor-pointer"
+          />
+          <Switch
+            checked={data.randomQuestion}
+            onCheckedChange={setRandomQuestion}
+            className="scale-75 opacity-30 hover:opacity-100 transition cursor-pointer"
+          />
+        </div>
+      </div>
       <ContestantsAdmin />
       <QuestionsAdmin />
     </main>
   );
 }
+
 
 function ContestantsAdmin() {
   const { data, setContestants } = useStore();

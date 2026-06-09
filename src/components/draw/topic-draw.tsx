@@ -64,7 +64,9 @@ export function TopicDrawSection() {
       if (elapsed < 1400) {
         setTimeout(tick, 80 + elapsed / 18);
       } else {
-        const finalPick = 0;
+        const finalPick = data.randomTopic
+          ? pool[Math.floor(Math.random() * pool.length)]
+          : 0;
 
         // Xác định nhóm được gán đề
         const relatedContestants =

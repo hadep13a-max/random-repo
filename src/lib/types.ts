@@ -60,4 +60,7 @@ export interface AppData {
   tableDraws: TableDrawRecord[];
   topicDraws: TopicDrawRecord[];
   questionDraws: QuestionDrawRecord[];
+  randomTopic: boolean;
+  randomQuestion: boolean;
 }
+

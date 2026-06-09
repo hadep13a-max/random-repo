@@ -137,14 +137,26 @@ function mapQuestionDrawFromDb(row: any): QuestionDrawRecord {
 }
 
 function loadData(): AppData {
+  const defaults = {
+    contestants: DEFAULT_CONTESTANTS,
+    questions: DEFAULT_QUESTIONS,
+    tableDraws: [],
+    topicDraws: [],
+    questionDraws: [],
+    randomTopic: false,
+    randomQuestion: false
+  };
   if (typeof window === "undefined") {
-    return { contestants: DEFAULT_CONTESTANTS, questions: DEFAULT_QUESTIONS, tableDraws: [], topicDraws: [], questionDraws: [] };
+    return defaults;
   }
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return { ...defaults, ...parsed };
+    }
   } catch {}
-  return { contestants: DEFAULT_CONTESTANTS, questions: DEFAULT_QUESTIONS, tableDraws: [], topicDraws: [], questionDraws: [] };
+  return defaults;
 }
 
 interface Ctx {
@@ -162,6 +174,8 @@ interface Ctx {
   resetTopicDraws: () => void;
   resetQuestionDraws: () => void;
   importDraws: (tableDraws: TableDrawRecord[], topicDraws: TopicDrawRecord[], questionDraws: QuestionDrawRecord[]) => Promise<void>;
+  setRandomTopic: (val: boolean) => Promise<void>;
+  setRandomQuestion: (val: boolean) => Promise<void>;
 }
 
 const StoreContext = createContext<Ctx | null>(null);
@@ -183,13 +197,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           { data: questions, error: errQ },
           { data: tableDraws, error: errTD },
           { data: topicDraws, error: errTPD },
-          { data: questionDraws, error: errQD }
+          { data: questionDraws, error: errQD },
+          { data: settingsData, error: errS }
         ] = await Promise.all([
           supabase.from("contestants").select("*").order("stt", { ascending: true }),
           supabase.from("questions").select("*").order("number", { ascending: true }),
           supabase.from("table_draws").select("*").order("at", { ascending: false }),
           supabase.from("topic_draws").select("*").order("at", { ascending: false }),
-          supabase.from("question_draws").select("*").order("at", { ascending: false })
+          supabase.from("question_draws").select("*").order("at", { ascending: false }),
+          Promise.resolve(supabase.from("settings").select("*")).catch(e => ({ data: null, error: e }))
         ]);
 
         if (errC) throw errC;
@@ -214,12 +230,28 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           if (error) console.error("Error seeding questions:", error);
         }
 
+        let randomTopic = false;
+        let randomQuestion = false;
+        if (errS) {
+          console.warn("Could not load settings from Supabase, using defaults or LocalStorage:", errS);
+          const local = loadData();
+          randomTopic = local.randomTopic;
+          randomQuestion = local.randomQuestion;
+        } else if (settingsData) {
+          const rt = settingsData.find((s: any) => s.key === "random_topic");
+          const rq = settingsData.find((s: any) => s.key === "random_question");
+          if (rt) randomTopic = rt.value === "true" || rt.value === true;
+          if (rq) randomQuestion = rq.value === "true" || rq.value === true;
+        }
+
         setData({
           contestants: finalContestants,
           questions: finalQuestions,
           tableDraws: tableDraws ? tableDraws.map(mapTableDrawFromDb) : [],
           topicDraws: topicDraws ? topicDraws.map(mapTopicDrawFromDb) : [],
           questionDraws: questionDraws ? questionDraws.map(mapQuestionDrawFromDb) : [],
+          randomTopic,
+          randomQuestion,
         });
       } catch (err: any) {
         console.error("Failed to load from Supabase:", err);
@@ -394,6 +426,34 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           }
         } catch (err: any) {
           toast.error("Lỗi đồng bộ Supabase khi nhập Excel: " + err.message);
+        }
+      }
+    },
+    setRandomTopic: async (val: boolean) => {
+      update({ randomTopic: val });
+      if (supabase) {
+        try {
+          const { error } = await supabase
+            .from("settings")
+            .upsert({ key: "random_topic", value: String(val) });
+          if (error) throw error;
+        } catch (err: any) {
+          console.error("Failed to save randomTopic to Supabase:", err);
+          toast.error("Không thể lưu cài đặt bốc đề vào Supabase: " + err.message);
+        }
+      }
+    },
+    setRandomQuestion: async (val: boolean) => {
+      update({ randomQuestion: val });
+      if (supabase) {
+        try {
+          const { error } = await supabase
+            .from("settings")
+            .upsert({ key: "random_question", value: String(val) });
+          if (error) throw error;
+        } catch (err: any) {
+          console.error("Failed to save randomQuestion to Supabase:", err);
+          toast.error("Không thể lưu cài đặt bốc câu hỏi vào Supabase: " + err.message);
         }
       }
     },

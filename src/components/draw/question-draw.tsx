@@ -95,62 +95,76 @@ export function QuestionDrawSection() {
     }
 
     // Xác định bộ đề khả dụng cho thí sinh này
-    const priorityQuestionNum = PRIORITY_MAP[c.stt];
     let availableQuestions = data.questions;
 
-    if (priorityQuestionNum !== undefined) {
-      const targetQ = data.questions.find((q) => q.number === priorityQuestionNum);
-      if (targetQ) {
-        availableQuestions = [targetQ];
-      }
-    } else {
+    if (data.randomQuestion) {
+      // Khi chế độ bốc câu hỏi ngẫu nhiên được bật:
+      // Chỉ lọc bỏ các câu hỏi đã bốc trong cùng một bàn, không giữ chỗ ưu tiên
       availableQuestions = data.questions.filter((q) => {
-        // 1. Không trùng với đề đã bốc bởi bất kỳ ai khác trong cùng bàn thi
         const isDrawnInThisTable = data.questionDraws.some((qd) => {
           if (qd.questionNumber !== q.number) return false;
           const td = data.tableDraws.find((t) => t.contestantId === qd.contestantId);
           return td && td.table === tableDraw.table;
         });
-        if (isDrawnInThisTable) return false;
-
-        // 2. Không được bốc trùng vào đề đã được ưu tiên/để dành cho các thí sinh đặc biệt khác ở cùng bàn thi
-        const isReserved = data.contestants.some((otherC) => {
-          const otherPriorityNum = PRIORITY_MAP[otherC.stt];
-          if (otherPriorityNum === q.number) {
-            // Kiểm tra xem thí sinh ưu tiên kia đã bốc đề chưa
-            const hasDrawnQ = data.questionDraws.some((qd) => qd.contestantId === otherC.id);
-            if (!hasDrawnQ) {
-              const otherTd = data.tableDraws.find((t) => t.contestantId === otherC.id);
-              if (!otherTd) {
-                // Nếu chưa bốc bàn, thí sinh đó hoàn toàn có thể vào bàn này -> giữ chỗ ở cả hai bàn
-                return true;
-              } else if (otherTd.table === tableDraw.table) {
-                // Nếu đã bốc cùng bàn -> giữ chỗ cho thí sinh đó
-                return true;
-              }
-            }
-          }
-          return false;
-        });
-
-        return !isReserved;
+        return !isDrawnInThisTable;
       });
-
-      // Phòng hờ nếu vì lý do nào đó không còn đề nào (fallback)
-      if (availableQuestions.length === 0) {
+    } else {
+      // Khi sử dụng logic ưu tiên mặc định:
+      const priorityQuestionNum = PRIORITY_MAP[c.stt];
+      if (priorityQuestionNum !== undefined) {
+        const targetQ = data.questions.find((q) => q.number === priorityQuestionNum);
+        if (targetQ) {
+          availableQuestions = [targetQ];
+        }
+      } else {
         availableQuestions = data.questions.filter((q) => {
+          // 1. Không trùng với đề đã bốc bởi bất kỳ ai khác trong cùng bàn thi
           const isDrawnInThisTable = data.questionDraws.some((qd) => {
             if (qd.questionNumber !== q.number) return false;
             const td = data.tableDraws.find((t) => t.contestantId === qd.contestantId);
             return td && td.table === tableDraw.table;
           });
-          return !isDrawnInThisTable;
-        });
-      }
+          if (isDrawnInThisTable) return false;
 
-      if (availableQuestions.length === 0) {
-        availableQuestions = data.questions;
+          // 2. Không được bốc trùng vào đề đã được ưu tiên/để dành cho các thí sinh đặc biệt khác ở cùng bàn thi
+          const isReserved = data.contestants.some((otherC) => {
+            const otherPriorityNum = PRIORITY_MAP[otherC.stt];
+            if (otherPriorityNum === q.number) {
+              // Kiểm tra xem thí sinh ưu tiên kia đã bốc đề chưa
+              const hasDrawnQ = data.questionDraws.some((qd) => qd.contestantId === otherC.id);
+              if (!hasDrawnQ) {
+                const otherTd = data.tableDraws.find((t) => t.contestantId === otherC.id);
+                if (!otherTd) {
+                  // Nếu chưa bốc bàn, thí sinh đó hoàn toàn có thể vào bàn này -> giữ chỗ ở cả hai bàn
+                  return true;
+                } else if (otherTd.table === tableDraw.table) {
+                  // Nếu đã bốc cùng bàn -> giữ chỗ cho thí sinh đó
+                  return true;
+                }
+              }
+            }
+            return false;
+          });
+
+          return !isReserved;
+        });
+
+        // Phòng hờ nếu vì lý do nào đó không còn đề nào (fallback)
+        if (availableQuestions.length === 0) {
+          availableQuestions = data.questions.filter((q) => {
+            const isDrawnInThisTable = data.questionDraws.some((qd) => {
+              if (qd.questionNumber !== q.number) return false;
+              const td = data.tableDraws.find((t) => t.contestantId === qd.contestantId);
+              return td && td.table === tableDraw.table;
+            });
+            return !isDrawnInThisTable;
+          });
+        }
       }
+    }
+
+    if (availableQuestions.length === 0) {
+      availableQuestions = data.questions;
     }
 
     setSpinning(true);
