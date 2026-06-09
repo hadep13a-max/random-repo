@@ -12,6 +12,16 @@ import {
   DialogContent,
 } from "@/components/ui/dialog";
 
+const PRIORITY_MAP: Record<number, number> = {
+  1: 2,
+  2: 16,
+  3: 1,
+  10: 1,
+  12: 9,
+  15: 7,
+  16: 10
+};
+
 export function QuestionDrawSection() {
   const { data, isAdmin, addQuestionDraw, resetQuestionDraws } = useStore();
   const [contestantId, setContestantId] = useState("");
@@ -19,137 +29,196 @@ export function QuestionDrawSection() {
   const [spinning, setSpinning] = useState(false);
   const [result, setResult] = useState<{ q: typeof data.questions[number]; name: string; rank: string } | null>(null);
   const [selectedHistoryQuestion, setSelectedHistoryQuestion] =
-  useState<(typeof data.questionDraws)[number] | null>(null);
+    useState<(typeof data.questionDraws)[number] | null>(null);
 
   const selectedTable = data.tableDraws.find(
-  (t) => t.contestantId === contestantId
-);
+    (t) => t.contestantId === contestantId
+  );
 
- const drawnContestantIds = useMemo(
-  () => new Set(data.questionDraws.map((d) => d.contestantId)),
-  [data.questionDraws]
-);
+  const drawnContestantIds = useMemo(
+    () => new Set(data.questionDraws.map((d) => d.contestantId)),
+    [data.questionDraws]
+  );
 
-// Chỉ hiện người đã bốc bàn nhưng chưa bốc phiếu, đồng thời lọc theo bàn thi hiện tại
-const availableContestants = useMemo(() => {
-  return data.contestants.filter((c) => {
-    // Chưa bốc phiếu
-    const notDrawn = !drawnContestantIds.has(c.id);
-    if (!notDrawn) return false;
+  // Chỉ hiện người đã bốc bàn nhưng chưa bốc phiếu, đồng thời lọc theo bàn thi hiện tại
+  const availableContestants = useMemo(() => {
+    return data.contestants.filter((c) => {
+      // Chưa bốc phiếu
+      const notDrawn = !drawnContestantIds.has(c.id);
+      if (!notDrawn) return false;
 
-    // Tìm thông tin bốc bàn
-    const tableDraw = data.tableDraws.find((t) => t.contestantId === c.id);
-    if (!tableDraw) return false;
+      // Tìm thông tin bốc bàn
+      const tableDraw = data.tableDraws.find((t) => t.contestantId === c.id);
+      if (!tableDraw) return false;
 
-    // Lọc theo bàn (1 hoặc 2)
-    return String(tableDraw.table) === tableFilter;
-  });
-}, [data.contestants, data.tableDraws, drawnContestantIds, tableFilter]);
+      // Lọc theo bàn (1 hoặc 2)
+      return String(tableDraw.table) === tableFilter;
+    });
+  }, [data.contestants, data.tableDraws, drawnContestantIds, tableFilter]);
 
-// Lọc lịch sử bốc thăm theo bàn thi hiện tại
-const filteredHistoryDraws = useMemo(() => {
-  return data.questionDraws.filter((d) => {
-    const tableDraw = data.tableDraws.find((t) => t.contestantId === d.contestantId);
-    return tableDraw ? String(tableDraw.table) === tableFilter : false;
-  });
-}, [data.questionDraws, data.tableDraws, tableFilter]);
+  // Lọc lịch sử bốc thăm theo bàn thi hiện tại
+  const filteredHistoryDraws = useMemo(() => {
+    return data.questionDraws.filter((d) => {
+      const tableDraw = data.tableDraws.find((t) => t.contestantId === d.contestantId);
+      return tableDraw ? String(tableDraw.table) === tableFilter : false;
+    });
+  }, [data.questionDraws, data.tableDraws, tableFilter]);
 
   const handleDraw = () => {
     if (!isAdmin) {
       toast.error("Bạn phải đăng nhập tài khoản quản trị (Admin) để thực hiện bốc thăm!");
       return;
     }
-  const c = data.contestants.find(
-    (x) => x.id === contestantId
-  );
+    const c = data.contestants.find(
+      (x) => x.id === contestantId
+    );
 
-  if (!c) {
-    toast.error("Hãy chọn người thi");
-    return;
-  }
+    if (!c) {
+      toast.error("Hãy chọn người thi");
+      return;
+    }
 
-  // Đã bốc phiếu
-  if (drawnContestantIds.has(c.id)) {
-    toast.error("Người này đã bốc phiếu");
-    return;
-  }
+    // Đã bốc phiếu
+    if (drawnContestantIds.has(c.id)) {
+      toast.error("Người này đã bốc phiếu");
+      return;
+    }
 
-  // Chưa bốc bàn
-  const tableDraw = data.tableDraws.find(
-    (d) => d.contestantId === c.id
-  );
+    // Chưa bốc bàn
+    const tableDraw = data.tableDraws.find(
+      (d) => d.contestantId === c.id
+    );
 
-  if (!tableDraw) {
-    toast.error("Phải bốc bàn trước");
-    return;
-  }
+    if (!tableDraw) {
+      toast.error("Phải bốc bàn trước");
+      return;
+    }
 
-  setSpinning(true);
-  setResult(null);
+    // Xác định bộ đề khả dụng cho thí sinh này
+    const priorityQuestionNum = PRIORITY_MAP[c.stt];
+    let availableQuestions = data.questions;
 
-  const start = performance.now();
+    if (priorityQuestionNum !== undefined) {
+      const targetQ = data.questions.find((q) => q.number === priorityQuestionNum);
+      if (targetQ) {
+        availableQuestions = [targetQ];
+      }
+    } else {
+      availableQuestions = data.questions.filter((q) => {
+        // 1. Không trùng với đề đã bốc bởi bất kỳ ai khác trong cùng bàn thi
+        const isDrawnInThisTable = data.questionDraws.some((qd) => {
+          if (qd.questionNumber !== q.number) return false;
+          const td = data.tableDraws.find((t) => t.contestantId === qd.contestantId);
+          return td && td.table === tableDraw.table;
+        });
+        if (isDrawnInThisTable) return false;
 
-  const tick = () => {
-    const elapsed = performance.now() - start;
+        // 2. Không được bốc trùng vào đề đã được ưu tiên/để dành cho các thí sinh đặc biệt khác ở cùng bàn thi
+        const isReserved = data.contestants.some((otherC) => {
+          const otherPriorityNum = PRIORITY_MAP[otherC.stt];
+          if (otherPriorityNum === q.number) {
+            // Kiểm tra xem thí sinh ưu tiên kia đã bốc đề chưa
+            const hasDrawnQ = data.questionDraws.some((qd) => qd.contestantId === otherC.id);
+            if (!hasDrawnQ) {
+              const otherTd = data.tableDraws.find((t) => t.contestantId === otherC.id);
+              if (!otherTd) {
+                // Nếu chưa bốc bàn, thí sinh đó hoàn toàn có thể vào bàn này -> giữ chỗ ở cả hai bàn
+                return true;
+              } else if (otherTd.table === tableDraw.table) {
+                // Nếu đã bốc cùng bàn -> giữ chỗ cho thí sinh đó
+                return true;
+              }
+            }
+          }
+          return false;
+        });
 
-    const randomQuestion =
-      data.questions[
+        return !isReserved;
+      });
+
+      // Phòng hờ nếu vì lý do nào đó không còn đề nào (fallback)
+      if (availableQuestions.length === 0) {
+        availableQuestions = data.questions.filter((q) => {
+          const isDrawnInThisTable = data.questionDraws.some((qd) => {
+            if (qd.questionNumber !== q.number) return false;
+            const td = data.tableDraws.find((t) => t.contestantId === qd.contestantId);
+            return td && td.table === tableDraw.table;
+          });
+          return !isDrawnInThisTable;
+        });
+      }
+
+      if (availableQuestions.length === 0) {
+        availableQuestions = data.questions;
+      }
+    }
+
+    setSpinning(true);
+    setResult(null);
+
+    const start = performance.now();
+
+    const tick = () => {
+      const elapsed = performance.now() - start;
+
+      const randomQuestion =
+        data.questions[
         Math.floor(
           Math.random() * data.questions.length
         )
-      ];
-
-    setResult({
-      q: randomQuestion,
-      name: c.name,
-      rank: c.rank,
-    });
-
-    if (elapsed < 1600) {
-      setTimeout(
-        tick,
-        70 + elapsed / 18
-      );
-    } else {
-      const finalQuestion =
-        data.questions[
-          Math.floor(
-            Math.random() * data.questions.length
-          )
         ];
 
-      addQuestionDraw({
-        id: `qd-${Date.now()}`,
-        contestantId: c.id,
-        contestantName: c.name,
-        rank: c.rank,
-        position: c.position,
-        unit: c.unit,
-
-        questionId: finalQuestion.id,
-        questionNumber: finalQuestion.number,
-        questionText: finalQuestion.text,
-
-        at: Date.now(),
-      });
-
       setResult({
-        q: finalQuestion,
+        q: randomQuestion,
         name: c.name,
         rank: c.rank,
       });
 
-      setSpinning(false);
-      setContestantId("");
+      if (elapsed < 1600) {
+        setTimeout(
+          tick,
+          70 + elapsed / 18
+        );
+      } else {
+        const finalQuestion =
+          availableQuestions[
+          Math.floor(
+            Math.random() * availableQuestions.length
+          )
+          ];
 
-      toast.success(
-        `${c.rank} ${c.name} — Phiếu ${finalQuestion.number}`
-      );
-    }
+        addQuestionDraw({
+          id: `qd-${Date.now()}`,
+          contestantId: c.id,
+          contestantName: c.name,
+          rank: c.rank,
+          position: c.position,
+          unit: c.unit,
+
+          questionId: finalQuestion.id,
+          questionNumber: finalQuestion.number,
+          questionText: finalQuestion.text,
+
+          at: Date.now(),
+        });
+
+        setResult({
+          q: finalQuestion,
+          name: c.name,
+          rank: c.rank,
+        });
+
+        setSpinning(false);
+        setContestantId("");
+
+        toast.success(
+          `${c.rank} ${c.name} — Phiếu ${finalQuestion.number}`
+        );
+      }
+    };
+
+    tick();
   };
-
-  tick();
-};
 
   return (
     <Card className="shadow-elegant border-primary/10">
@@ -165,36 +234,36 @@ const filteredHistoryDraws = useMemo(() => {
         <p className="text-xs text-muted-foreground">Thí sinh lọc theo bàn thi đã bốc, sau đó chọn tên để thực hiện bốc phiếu câu hỏi tương ứng.</p>
       </CardHeader>
       <CardContent>
-<div className="grid gap-4 lg:grid-cols-[1.4fr_420px]">          {/* Left side - Draw interface */}
+        <div className="grid gap-4 lg:grid-cols-[1.4fr_420px]">          {/* Left side - Draw interface */}
           <div className="space-y-3">
-           <div className="flex flex-wrap items-center gap-2 text-sm">
-  <div className="rounded-md border bg-card px-3 py-1.5">
-    <span className="text-muted-foreground">
-      Tổng số phiếu:
-    </span>
-    <span className="ml-2 font-bold text-primary">
-      {data.questions.length}
-    </span>
-  </div>
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <div className="rounded-md border bg-card px-3 py-1.5">
+                <span className="text-muted-foreground">
+                  Tổng số phiếu:
+                </span>
+                <span className="ml-2 font-bold text-primary">
+                  {data.questions.length}
+                </span>
+              </div>
 
-  <div className="rounded-md border bg-card px-3 py-1.5">
-    <span className="text-muted-foreground">
-      Đã bốc:
-    </span>
-    <span className="ml-2 font-bold text-green-600">
-      {data.questionDraws.length}
-    </span>
-  </div>
+              <div className="rounded-md border bg-card px-3 py-1.5">
+                <span className="text-muted-foreground">
+                  Đã bốc:
+                </span>
+                <span className="ml-2 font-bold text-green-600">
+                  {data.questionDraws.length}
+                </span>
+              </div>
 
-  <div className="rounded-md border bg-card px-3 py-1.5">
-    <span className="text-muted-foreground">
-      Chưa bốc:
-    </span>
-    <span className="ml-2 font-bold text-amber-600">
-      {availableContestants.length}
-    </span>
-  </div>
-</div>
+              <div className="rounded-md border bg-card px-3 py-1.5">
+                <span className="text-muted-foreground">
+                  Chưa bốc:
+                </span>
+                <span className="ml-2 font-bold text-amber-600">
+                  {availableContestants.length}
+                </span>
+              </div>
+            </div>
 
             <div className="grid gap-3 md:grid-cols-[160px_1fr_auto]">
               <Select value={tableFilter} onValueChange={(v) => { setTableFilter(v); setContestantId(""); }} disabled={spinning}>
@@ -220,7 +289,7 @@ const filteredHistoryDraws = useMemo(() => {
                   })}
                 </SelectContent>
               </Select>
-                      <Button size="lg" onClick={handleDraw} disabled={spinning || !contestantId} className="bg-hero text-primary-foreground shadow-elegant">
+              <Button size="lg" onClick={handleDraw} disabled={spinning || !contestantId} className="bg-hero text-primary-foreground shadow-elegant">
                 <RotateCw className={spinning ? "animate-spin-slow" : ""} /> {spinning ? "Đang quay..." : "Bắt đầu quay"}
               </Button>
             </div>
@@ -244,13 +313,13 @@ const filteredHistoryDraws = useMemo(() => {
                         <div className="text-4xl font-black">{result.q.number}</div>
                       </div>
                     </div>
-                   <div className="mt-4 w-full rounded-lg bg-card p-5 text-left border border-gold/30 shadow-sm">
-  <div className="text-base font-semibold mb-3 text-primary">
-    Nội dung câu hỏi:
-  </div>
+                    <div className="mt-4 w-full rounded-lg bg-card p-5 text-left border border-gold/30 shadow-sm">
+                      <div className="text-base font-semibold mb-3 text-primary">
+                        Nội dung câu hỏi:
+                      </div>
 
-<div
-  className="
+                      <div
+                        className="
     whitespace-pre-wrap
     text-[17px]
     leading-8
@@ -258,35 +327,35 @@ const filteredHistoryDraws = useMemo(() => {
     text-justify
     tracking-[0.01em]
   "
->  {result.q.text.split("\n").map((line, index) => {
-    // In đậm PHIẾU SỐ
-    if (/^PHIẾU SỐ\s+\d+/i.test(line.trim())) {
-      return (
-        <div key={index} className="font-bold text-2xl mb-4 text-primary">
-          {line}
-        </div>
-      );
-    }
+                      >  {result.q.text.split("\n").map((line, index) => {
+                        // In đậm PHIẾU SỐ
+                        if (/^PHIẾU SỐ\s+\d+/i.test(line.trim())) {
+                          return (
+                            <div key={index} className="font-bold text-2xl mb-4 text-primary">
+                              {line}
+                            </div>
+                          );
+                        }
 
-    // In đậm Câu 1:, Câu 2:, Câu 3:...
-    const match = line.match(/^(Câu\s+\d+:)(.*)$/i);
+                        // In đậm Câu 1:, Câu 2:, Câu 3:...
+                        const match = line.match(/^(Câu\s+\d+:)(.*)$/i);
 
-    if (match) {
-      return (
-        <div key={index} className="mb-3">
-          <span className="font-extrabold text-xl text-red-700">
-  {match[1]}
-</span>
-          <span>{match[2]}</span>
-        </div>
-      );
-    }
+                        if (match) {
+                          return (
+                            <div key={index} className="mb-3">
+                              <span className="font-extrabold text-xl text-red-700">
+                                {match[1]}
+                              </span>
+                              <span>{match[2]}</span>
+                            </div>
+                          );
+                        }
 
-    return <div key={index}>{line}</div>;
-  })}
-</div>
-</div>
-                   
+                        return <div key={index}>{line}</div>;
+                      })}
+                      </div>
+                    </div>
+
                   </motion.div>
                 ) : (
                   <div className="text-center p-4">
@@ -350,66 +419,66 @@ const filteredHistoryDraws = useMemo(() => {
       </CardContent>
 
       <Dialog
-  open={!!selectedHistoryQuestion}
-  onOpenChange={() =>
-    setSelectedHistoryQuestion(null)
-  }
->
-  <DialogContent className="max-w-4xl max-h-[85vh] overflow-auto">
+        open={!!selectedHistoryQuestion}
+        onOpenChange={() =>
+          setSelectedHistoryQuestion(null)
+        }
+      >
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-auto">
 
-    <div
-      className="
+          <div
+            className="
         whitespace-pre-wrap
         text-[17px]
         leading-8
         text-justify
       "
-    >
-      {selectedHistoryQuestion?.questionText
-        ?.split("\n")
-        .map((line, index) => {
-          if (
-            /^PHIẾU SỐ\s+\d+/i.test(
-              line.trim()
-            )
-          ) {
-            return (
-              <div
-                key={index}
-                className="font-bold text-2xl mb-4 text-primary"
-              >
-                {line}
-              </div>
-            );
-          }
+          >
+            {selectedHistoryQuestion?.questionText
+              ?.split("\n")
+              .map((line, index) => {
+                if (
+                  /^PHIẾU SỐ\s+\d+/i.test(
+                    line.trim()
+                  )
+                ) {
+                  return (
+                    <div
+                      key={index}
+                      className="font-bold text-2xl mb-4 text-primary"
+                    >
+                      {line}
+                    </div>
+                  );
+                }
 
-          const match = line.match(
-            /^(Câu\s+\d+:)(.*)$/i
-          );
+                const match = line.match(
+                  /^(Câu\s+\d+:)(.*)$/i
+                );
 
-          if (match) {
-            return (
-              <div
-                key={index}
-                className="mb-3"
-              >
-                <span className="font-extrabold text-xl text-red-700">
-                  {match[1]}
-                </span>
-                <span>{match[2]}</span>
-              </div>
-            );
-          }
+                if (match) {
+                  return (
+                    <div
+                      key={index}
+                      className="mb-3"
+                    >
+                      <span className="font-extrabold text-xl text-red-700">
+                        {match[1]}
+                      </span>
+                      <span>{match[2]}</span>
+                    </div>
+                  );
+                }
 
-          return (
-            <div key={index}>
-              {line}
-            </div>
-          );
-        })}
-    </div>
-  </DialogContent>
-</Dialog>
+                return (
+                  <div key={index}>
+                    {line}
+                  </div>
+                );
+              })}
+          </div>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

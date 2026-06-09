@@ -72,16 +72,31 @@ export function ResultSummarySection() {
     });
 
     result.sort((a, b) => {
+      // 1. Primary sort based on the selected field
       const av = a[sortField];
       const bv = b[sortField];
 
-      if (typeof av === "number" && typeof bv === "number") {
-        return ascending
-          ? av - bv
-          : bv - av;
+      if (av !== bv) {
+        if (typeof av === "number" && typeof bv === "number") {
+          return ascending ? av - bv : bv - av;
+        }
       }
 
-      return 0;
+      // 2. Secondary/Tertiary sort when primary field is equal
+      if (sortField === "table") {
+        // Table is equal -> sub-sort by turn ascending, then by stt ascending
+        if (a.turn !== b.turn) return a.turn - b.turn;
+        return a.stt - b.stt;
+      } else if (sortField === "turn") {
+        // Turn is equal -> sub-sort by table ascending, then by stt ascending
+        if (a.table !== b.table) return a.table - b.table;
+        return a.stt - b.stt;
+      } else {
+        // For other fields (stt, topic, question) -> sub-sort by table, then turn, then stt
+        if (a.table !== b.table) return a.table - b.table;
+        if (a.turn !== b.turn) return a.turn - b.turn;
+        return a.stt - b.stt;
+      }
     });
 
     return result;
