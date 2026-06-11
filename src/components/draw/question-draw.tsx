@@ -16,8 +16,11 @@ const PRIORITY_MAP: Record<number, number> = {
   1: 2,
   2: 16,
   3: 1,
+  5: 17,
+  7: 8,
   10: 1,
   12: 9,
+  13: 11,
   15: 7,
   16: 10
 };
