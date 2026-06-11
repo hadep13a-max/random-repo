@@ -214,7 +214,7 @@ const table2Draws = useMemo(
 <div className="grid place-items-center rounded-xl border border-dashed border-primary/30 bg-gradient-to-br from-secondary/40 to-accent/40 p-4 min-h-[180px]">              <AnimatePresence mode="wait">
                 {result ? (
                   <motion.div
-                    key={`${result.table}-${result.turn}-${spinning}`}
+                    key={result.name}
                     initial={{ opacity: 0, scale: 0.6, rotate: -8 }}
                     animate={{ opacity: 1, scale: 1, rotate: 0 }}
                     exit={{ opacity: 0, scale: 0.6 }}

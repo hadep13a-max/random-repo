@@ -316,7 +316,7 @@ export function QuestionDrawSection() {
               <AnimatePresence mode="wait">
                 {result ? (
                   <motion.div
-                    key={`${result.q.id}-${spinning}`}
+                    key={result.name}
                     initial={{ opacity: 0, scale: 0.5, rotateY: -90 }}
                     animate={{ opacity: 1, scale: 1, rotateY: 0 }}
                     exit={{ opacity: 0, scale: 0.5, rotateY: 90 }}
