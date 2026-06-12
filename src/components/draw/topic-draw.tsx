@@ -242,7 +242,7 @@ export function TopicDrawSection() {
                     <div className={`w-2 h-2 rounded-full transition-transform duration-300 ${selectedTarget === 1 ? "bg-primary scale-125 animate-pulse" : "bg-muted-foreground/30"}`} />
                   </div>
                   <span className="text-[10px] text-muted-foreground mt-1 leading-tight font-medium">
-                    Bốc trong 3 đề (Đề 1, 2, 3)
+                    Bốc 1 trong 3 đề (Đề 1, 2, 3)
                   </span>
                   
                   {rep1 && (
@@ -284,7 +284,7 @@ export function TopicDrawSection() {
                     <div className={`w-2 h-2 rounded-full transition-transform duration-300 ${selectedTarget === 2 ? "bg-primary scale-125 animate-pulse" : "bg-muted-foreground/30"}`} />
                   </div>
                   <span className="text-[10px] text-muted-foreground mt-1 leading-tight font-medium">
-                    Bốc trong 2 đề (Đề 1, 3)
+                    Bốc 1 trong 2 đề (Đề 1, 3)
                   </span>
                   
                   {rep2 && (
