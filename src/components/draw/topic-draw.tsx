@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FileText, RotateCw, Trash2, Info, Eye, EyeOff } from "lucide-react";
 import { useStore } from "@/lib/store";
@@ -15,17 +15,71 @@ export function TopicDrawSection() {
   const [spinning, setSpinning] = useState(false);
   const [result, setResult] = useState<{ idx: number; name: string; rank: string } | null>(null);
   const [showTopics, setShowTopics] = useState(true);
+  const [selectedTarget, setSelectedTarget] = useState<1 | 2>(1);
 
   const drawnIds = useMemo(
     () => new Set(data.topicDraws.map((d) => d.contestantId)),
     [data.topicDraws]
   );
 
-  const available = data.contestants.filter(
-    (c) =>
-      (c.stt === 1 || c.stt === 21) &&
-      !drawnIds.has(c.id)
+  const available = useMemo(
+    () =>
+      data.contestants.filter(
+        (c) =>
+          (c.stt === 1 || c.stt === 21) &&
+          !drawnIds.has(c.id)
+      ),
+    [data.contestants, drawnIds]
   );
+
+  const rep1 = useMemo(() => data.contestants.find((c) => c.stt === 1), [data.contestants]);
+  const rep2 = useMemo(() => data.contestants.find((c) => c.stt === 21), [data.contestants]);
+
+  const group1Drawn = useMemo(
+    () => (rep1 ? drawnIds.has(rep1.id) : false),
+    [rep1, drawnIds]
+  );
+  const group2Drawn = useMemo(
+    () => (rep2 ? drawnIds.has(rep2.id) : false),
+    [rep2, drawnIds]
+  );
+
+  const filteredAvailable = useMemo(() => {
+    return available.filter((c) =>
+      selectedTarget === 1 ? c.stt === 1 : c.stt === 21
+    );
+  }, [available, selectedTarget]);
+
+  // Set default selectedTarget based on who hasn't drawn yet
+  useEffect(() => {
+    if (group1Drawn && !group2Drawn) {
+      setSelectedTarget(2);
+    } else if (group2Drawn && !group1Drawn) {
+      setSelectedTarget(1);
+    }
+  }, [group1Drawn, group2Drawn]);
+
+  // Auto-select the contestant representing the selected target
+  useEffect(() => {
+    const candidate = available.find(
+      (c) => (selectedTarget === 1 ? c.stt === 1 : c.stt === 21)
+    );
+    if (candidate) {
+      setContestantId(candidate.id);
+    } else {
+      setContestantId("");
+    }
+  }, [selectedTarget, available]);
+
+  const visibleTopics = useMemo(() => {
+    if (selectedTarget === 2) {
+      return [
+        { index: 0, text: TOPICS[0] },
+        { index: 2, text: TOPICS[2] },
+      ];
+    }
+    return TOPICS.map((text, index) => ({ index, text }));
+  }, [selectedTarget]);
   const handleDraw = () => {
     if (!isAdmin) {
       toast.error("Bạn phải đăng nhập tài khoản quản trị (Admin) để thực hiện bốc thăm!");
@@ -144,11 +198,11 @@ export function TopicDrawSection() {
                     <EyeOff className="h-3.5 w-3.5" />
                   </Button>
                 </div>
-                <ol className="space-y-1 text-xs">
-                  {TOPICS.map((t, i) => (
-                    <li key={i} className="flex gap-2">
-                      <Badge className="bg-gold text-gold-foreground shrink-0">Đề {i + 1}</Badge>
-                      <span className="text-foreground/80">{t}</span>
+                <ol className="space-y-2 text-xs">
+                  {visibleTopics.map(({ index, text }) => (
+                    <li key={index} className="flex gap-2 items-start">
+                      <Badge className="bg-gold text-gold-foreground shrink-0">Đề {index + 1}</Badge>
+                      <span className="text-foreground/80 leading-relaxed">{text}</span>
                     </li>
                   ))}
                 </ol>
@@ -166,16 +220,103 @@ export function TopicDrawSection() {
             )}
 
             <div className="grid gap-3">
-              <Select value={contestantId} onValueChange={setContestantId} disabled={spinning}>
-                <SelectTrigger><SelectValue placeholder="Chọn người thi..." /></SelectTrigger>
-                <SelectContent>
-                  {available.length === 0 && (
-                    <div className="px-2 py-3 text-sm text-muted-foreground">
-                      Tất cả đã bốc đề
+              {/* Ô chọn Đối tượng 1 & Đối tượng 2 */}
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  disabled={spinning}
+                  onClick={() => setSelectedTarget(1)}
+                  className={`group relative overflow-hidden flex flex-col p-3.5 rounded-xl border text-left transition-all duration-300 ${
+                    selectedTarget === 1
+                      ? "border-primary bg-primary/5 dark:bg-primary/10 shadow-sm"
+                      : "border-border hover:border-primary/30 bg-card hover:bg-secondary/20"
+                  } ${spinning ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}
+                >
+                  {selectedTarget === 1 && (
+                    <div className="absolute -right-6 -bottom-6 w-16 h-16 rounded-full bg-primary/10 blur-md pointer-events-none" />
+                  )}
+                  <div className="flex justify-between items-start w-full gap-2">
+                    <span className={`font-bold text-xs tracking-wide ${selectedTarget === 1 ? "text-primary font-extrabold" : "text-foreground/80"}`}>
+                      Đối tượng 1
+                    </span>
+                    <div className={`w-2 h-2 rounded-full transition-transform duration-300 ${selectedTarget === 1 ? "bg-primary scale-125 animate-pulse" : "bg-muted-foreground/30"}`} />
+                  </div>
+                  <span className="text-[10px] text-muted-foreground mt-1 leading-tight font-medium">
+                    Bốc trong 3 đề (Đề 1, 2, 3)
+                  </span>
+                  
+                  {rep1 && (
+                    <div className="mt-2 text-[10px] text-foreground/70 border-t pt-1.5 border-border/40 font-medium">
+                      Đại diện: <span className="text-foreground font-semibold">{rep1.rank} {rep1.name}</span>
                     </div>
                   )}
 
-                  {available.map((c) => (
+                  <div className="mt-2">
+                    {group1Drawn ? (
+                      <Badge variant="secondary" className="text-[9px] px-1.5 py-0 font-normal">
+                        Đã bốc đề
+                      </Badge>
+                    ) : (
+                      <Badge className="text-[9px] px-1.5 py-0 font-normal bg-emerald-600 hover:bg-emerald-600/90 text-white border-transparent">
+                        Chưa bốc
+                      </Badge>
+                    )}
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  disabled={spinning}
+                  onClick={() => setSelectedTarget(2)}
+                  className={`group relative overflow-hidden flex flex-col p-3.5 rounded-xl border text-left transition-all duration-300 ${
+                    selectedTarget === 2
+                      ? "border-primary bg-primary/5 dark:bg-primary/10 shadow-sm"
+                      : "border-border hover:border-primary/30 bg-card hover:bg-secondary/20"
+                  } ${spinning ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}
+                >
+                  {selectedTarget === 2 && (
+                    <div className="absolute -right-6 -bottom-6 w-16 h-16 rounded-full bg-primary/10 blur-md pointer-events-none" />
+                  )}
+                  <div className="flex justify-between items-start w-full gap-2">
+                    <span className={`font-bold text-xs tracking-wide ${selectedTarget === 2 ? "text-primary font-extrabold" : "text-foreground/80"}`}>
+                      Đối tượng 2
+                    </span>
+                    <div className={`w-2 h-2 rounded-full transition-transform duration-300 ${selectedTarget === 2 ? "bg-primary scale-125 animate-pulse" : "bg-muted-foreground/30"}`} />
+                  </div>
+                  <span className="text-[10px] text-muted-foreground mt-1 leading-tight font-medium">
+                    Bốc trong 2 đề (Đề 1, 3)
+                  </span>
+                  
+                  {rep2 && (
+                    <div className="mt-2 text-[10px] text-foreground/70 border-t pt-1.5 border-border/40 font-medium">
+                      Đại diện: <span className="text-foreground font-semibold">{rep2.rank} {rep2.name}</span>
+                    </div>
+                  )}
+
+                  <div className="mt-2">
+                    {group2Drawn ? (
+                      <Badge variant="secondary" className="text-[9px] px-1.5 py-0 font-normal">
+                        Đã bốc đề
+                      </Badge>
+                    ) : (
+                      <Badge className="text-[9px] px-1.5 py-0 font-normal bg-emerald-600 hover:bg-emerald-600/90 text-white border-transparent">
+                        Chưa bốc
+                      </Badge>
+                    )}
+                  </div>
+                </button>
+              </div>
+
+              <Select value={contestantId} onValueChange={setContestantId} disabled={spinning}>
+                <SelectTrigger><SelectValue placeholder="Chọn người thi..." /></SelectTrigger>
+                <SelectContent>
+                  {filteredAvailable.length === 0 && (
+                    <div className="px-2 py-3 text-sm text-muted-foreground">
+                      Đại diện nhóm đã bốc đề
+                    </div>
+                  )}
+
+                  {filteredAvailable.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
                       {c.stt === 1
                         ? `${c.rank} ${c.name} (Đại diện nhóm đối tượng 1)`
@@ -214,7 +355,7 @@ export function TopicDrawSection() {
                   <div className="text-center p-4">
                     <FileText className="mx-auto mb-3 h-12 w-12 text-primary/50 animate-pulse" />
                     <p className="font-bold text-base md:text-lg text-primary/90 tracking-wide">
-                      Nhấn chọn người thi, sau đó nhấn "Bốc đề"
+                      Nhấn chọn đối tượng, sau đó nhấn "Bốc đề"
                     </p>
                   </div>
                 )}
