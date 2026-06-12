@@ -19,6 +19,7 @@ const PRIORITY_MAP: Record<number, number> = {
   4: 7,
   5: 17,
   7: 8,
+  8: 14,
   10: 1,
   12: 9,
   13: 11,
