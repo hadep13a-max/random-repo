@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { HelpCircle, RotateCw, Trash2 } from "lucide-react";
+import { HelpCircle, RotateCw, Trash2, Sparkles } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +12,44 @@ import {
   DialogContent,
 } from "@/components/ui/dialog";
 
+const ConfettiParticles = () => {
+  const particles = useMemo(() =>
+    Array.from({ length: 40 }).map((_, i) => ({
+      id: i,
+      x: Math.random() * 400 - 200,
+      y: Math.random() * 400 - 200,
+      scale: Math.random() * 0.8 + 0.4,
+      color: i % 4 === 0 ? "#EAB308" : i % 4 === 1 ? "#EF4444" : i % 4 === 2 ? "#3B82F6" : "#ffffff",
+      delay: Math.random() * 0.3,
+    })),
+    []
+  );
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden z-10">
+      {particles.map((p) => (
+        <motion.div
+          key={p.id}
+          className="absolute left-1/2 top-1/2 w-2.5 h-2.5 rounded-full"
+          style={{ backgroundColor: p.color }}
+          initial={{ x: 0, y: 0, opacity: 1, scale: 0 }}
+          animate={{
+            x: p.x,
+            y: p.y,
+            opacity: [1, 1, 0],
+            scale: [0, p.scale, 0],
+          }}
+          transition={{
+            duration: 2.2,
+            delay: p.delay,
+            ease: [0.1, 0.8, 0.3, 1],
+          }}
+        />
+      ))}
+    </div>
+  );
+};
+
+
 const PRIORITY_MAP: Record<number, number> = {
   1: 2,
   2: 16,
@@ -20,6 +58,7 @@ const PRIORITY_MAP: Record<number, number> = {
   5: 17,
   7: 8,
   8: 14,
+  9: 13,
   10: 1,
   12: 9,
   13: 11,
@@ -32,9 +71,10 @@ export function QuestionDrawSection() {
   const [contestantId, setContestantId] = useState("");
   const [tableFilter, setTableFilter] = useState<string>("1");
   const [spinning, setSpinning] = useState(false);
-  const [result, setResult] = useState<{ q: typeof data.questions[number]; name: string; rank: string } | null>(null);
+  const [result, setResult] = useState<{ q: typeof data.questions[number]; name: string; rank: string; table: string } | null>(null);
   const [selectedHistoryQuestion, setSelectedHistoryQuestion] =
     useState<(typeof data.questionDraws)[number] | null>(null);
+  const [showResultModal, setShowResultModal] = useState(false);
 
   const selectedTable = data.tableDraws.find(
     (t) => t.contestantId === contestantId
@@ -98,6 +138,8 @@ export function QuestionDrawSection() {
       toast.error("Phải bốc bàn trước");
       return;
     }
+
+    const tableNum = String(tableDraw.table);
 
     // Xác định bộ đề khả dụng cho thí sinh này
     let availableQuestions = data.questions;
@@ -191,6 +233,7 @@ export function QuestionDrawSection() {
         q: randomQuestion,
         name: c.name,
         rank: c.rank,
+        table: tableNum,
       });
 
       if (elapsed < 1600) {
@@ -225,14 +268,12 @@ export function QuestionDrawSection() {
           q: finalQuestion,
           name: c.name,
           rank: c.rank,
+          table: tableNum,
         });
 
         setSpinning(false);
         setContestantId("");
-
-        toast.success(
-          `${c.rank} ${c.name} — Phiếu ${finalQuestion.number}`
-        );
+        setShowResultModal(true);
       }
     };
 
@@ -340,7 +381,7 @@ export function QuestionDrawSection() {
                       <div
                         className="
     whitespace-pre-wrap
-    text-[17px]
+    text-[18px]
     leading-8
     text-foreground
     text-justify
@@ -496,6 +537,93 @@ export function QuestionDrawSection() {
                 );
               })}
           </div>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={showResultModal} onOpenChange={setShowResultModal}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto bg-gradient-to-b from-slate-900 via-slate-950 to-slate-900 text-white border-gold/30 shadow-[0_0_50px_rgba(234,179,8,0.25)] rounded-2xl p-6">
+          <AnimatePresence>
+            {showResultModal && result && (
+              <div className="relative">
+                <ConfettiParticles />
+
+                <motion.div
+                  initial={{ scale: 0.8, opacity: 0, y: 30 }}
+                  animate={{ scale: 1, opacity: 1, y: 0 }}
+                  exit={{ scale: 0.8, opacity: 0, y: 30 }}
+                  transition={{ type: "spring", stiffness: 200, damping: 20 }}
+                  className="space-y-5 text-center animate-in fade-in zoom-in duration-300"
+                >
+                  <div>
+                    <h2 className="text-2xl font-black uppercase tracking-wider bg-gradient-to-r from-yellow-300 via-amber-400 to-yellow-300 bg-clip-text text-transparent drop-shadow-sm">
+                      KẾT QUẢ BỐC PHIẾU CÂU HỎI
+                    </h2>
+                    <p className="text-[11px] text-slate-400 font-bold uppercase tracking-[0.2em] mt-0.5">
+                      PHẦN THI NHẬN THỨC
+                    </p>
+                  </div>
+
+                  <div className="bg-white/5 border border-white/10 rounded-xl p-3 flex flex-col md:flex-row items-center justify-between gap-3 backdrop-blur-sm text-left">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="inline-block text-[10px] md:text-xs px-2.5 py-0.5 rounded bg-primary/20 border border-primary/30 text-yellow-400 font-bold uppercase tracking-wider">
+                          BÀN THI SỐ {result.table}
+                        </span>
+                        <span className="text-[10px] md:text-xs text-slate-400 font-semibold uppercase tracking-wider">
+                          {result.rank}
+                        </span>
+                      </div>
+                      <span className="text-lg md:text-xl font-bold text-slate-100 tracking-wide mt-0.5 block">
+                        {result.name}
+                      </span>
+                    </div>
+                    <div className="bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 px-4 py-1.5 rounded-lg border border-yellow-300/20 font-extrabold text-sm md:text-base whitespace-nowrap shadow-sm">
+                      PHIẾU SỐ {result.q.number}
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-950/70 border border-gold/20 rounded-xl p-5 text-justify text-slate-200 shadow-inner">
+                    <div className="font-semibold text-gold mb-2 text-xs uppercase tracking-wider text-center border-b border-white/5 pb-1 w-32 mx-auto">
+                      Nội dung câu hỏi
+                    </div>
+                    <div className="mt-3 whitespace-pre-wrap text-[25px] md:text-[28px] font-bold leading-relaxed text-slate-100 tracking-[0.01em]">
+                      {result.q.text.split("\n").map((line, index) => {
+                        // Bỏ dòng tiêu đề PHIẾU SỐ trùng lặp
+                        if (/^PHIẾU SỐ\s+\d+/i.test(line.trim())) {
+                          return null;
+                        }
+
+                        // In đậm Câu 1:, Câu 2:, Câu 3:...
+                        const match = line.match(/^(Câu\s+\d+:)(.*)$/i);
+
+                        if (match) {
+                          return (
+                            <div key={index} className="mb-4">
+                              <span className="font-black text-2xl md:text-3xl text-red-400 mr-2.5 block sm:inline">
+                                {match[1]}
+                              </span>
+                              <span>{match[2]}</span>
+                            </div>
+                          );
+                        }
+
+                        return <div key={index} className="mb-3">{line}</div>;
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="pt-1">
+                    <Button
+                      size="lg"
+                      onClick={() => setShowResultModal(false)}
+                      className="w-full sm:w-auto bg-gradient-to-r from-red-700 to-red-600 hover:from-red-600 hover:to-red-500 text-white font-bold px-12 py-3 rounded-xl border border-red-500/20 shadow-lg hover:shadow-red-900/30 transition-all cursor-pointer"
+                    >
+                      ĐỒNG Ý & ĐÓNG
+                    </Button>
+                  </div>
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>
         </DialogContent>
       </Dialog>
     </Card>

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Armchair, RotateCw, Trash2 } from "lucide-react";
+import { Armchair, RotateCw, Trash2, Sparkles } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { TABLE_TURNS } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
@@ -8,12 +8,52 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+
+const ConfettiParticles = () => {
+  const particles = useMemo(() => 
+    Array.from({ length: 40 }).map((_, i) => ({
+      id: i,
+      x: Math.random() * 400 - 200,
+      y: Math.random() * 400 - 200,
+      scale: Math.random() * 0.8 + 0.4,
+      color: i % 4 === 0 ? "#EAB308" : i % 4 === 1 ? "#EF4444" : i % 4 === 2 ? "#3B82F6" : "#ffffff",
+      delay: Math.random() * 0.3,
+    })),
+    []
+  );
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden z-10">
+      {particles.map((p) => (
+        <motion.div
+          key={p.id}
+          className="absolute left-1/2 top-1/2 w-2.5 h-2.5 rounded-full"
+          style={{ backgroundColor: p.color }}
+          initial={{ x: 0, y: 0, opacity: 1, scale: 0 }}
+          animate={{
+            x: p.x,
+            y: p.y,
+            opacity: [1, 1, 0],
+            scale: [0, p.scale, 0],
+          }}
+          transition={{
+            duration: 2.2,
+            delay: p.delay,
+            ease: [0.1, 0.8, 0.3, 1],
+          }}
+        />
+      ))}
+    </div>
+  );
+};
+
 
 export function TableDrawSection() {
   const { data, isAdmin, addTableDraw, resetTableDraws } = useStore();
   const [contestantId, setContestantId] = useState<string>("");
   const [spinning, setSpinning] = useState(false);
   const [result, setResult] = useState<{ table: 1 | 2; turn: number; name: string; rank: string } | null>(null);
+  const [showResultModal, setShowResultModal] = useState(false);
 
   const drawnIds = useMemo(() => new Set(data.tableDraws.map((d) => d.contestantId)), [data.tableDraws]);
   const availableContestants = data.contestants.filter((c) => !drawnIds.has(c.id));
@@ -115,7 +155,7 @@ export function TableDrawSection() {
         setResult({ table: finalPick.table, turn: finalPick.turn, name: c.name, rank: c.rank });
         setSpinning(false);
         setContestantId("");
-        toast.success(`${c.rank} ${c.name} — Bàn ${finalPick.table}, Lượt ${finalPick.turn}`);
+        setShowResultModal(true);
       }
     };
     tick();
@@ -257,6 +297,74 @@ const table2Draws = useMemo(
           Tổng cộng: {data.tableDraws.length}/{data.contestants.length}
         </div>
       </CardContent>
+
+      <Dialog open={showResultModal} onOpenChange={setShowResultModal}>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto bg-gradient-to-b from-slate-900 via-slate-950 to-slate-900 text-white border-gold/30 shadow-[0_0_50px_rgba(234,179,8,0.25)] rounded-2xl p-6">
+          <AnimatePresence>
+            {showResultModal && result && (
+              <div className="relative">
+                <ConfettiParticles />
+                
+                <motion.div
+                  initial={{ scale: 0.8, opacity: 0, y: 30 }}
+                  animate={{ scale: 1, opacity: 1, y: 0 }}
+                  exit={{ scale: 0.8, opacity: 0, y: 30 }}
+                  transition={{ type: "spring", stiffness: 200, damping: 20 }}
+                  className="space-y-5 text-center animate-in fade-in zoom-in duration-300"
+                >
+                  <div>
+                    <h2 className="text-2xl font-black uppercase tracking-wider bg-gradient-to-r from-yellow-300 via-amber-400 to-yellow-300 bg-clip-text text-transparent drop-shadow-sm">
+                      KẾT QUẢ BỐC BÀN & LƯỢT THI
+                    </h2>
+                    <p className="text-[11px] text-slate-400 font-bold uppercase tracking-[0.2em] mt-0.5">
+                      HỘI THI BÍ THƯ CHI BỘ NĂM 2026
+                    </p>
+                  </div>
+
+                  <div className="space-y-1 text-center">
+                    <span className="text-xs md:text-sm font-semibold text-slate-400 uppercase tracking-wider block">
+                      {result.rank}
+                    </span>
+                    <span className="text-2xl md:text-3xl font-black text-slate-100 tracking-wide block">
+                      {result.name}
+                    </span>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-2">
+                    <div className="flex-1 max-w-[220px] w-full bg-gradient-to-br from-amber-500 to-yellow-400 text-slate-950 p-4 md:p-5 rounded-2xl shadow-[0_0_20px_rgba(234,179,8,0.25)] border border-yellow-300/30 text-center">
+                      <div className="text-xs uppercase font-extrabold tracking-wider opacity-85">BÀN THI</div>
+                      <div className="text-4xl md:text-5xl font-black mt-1.5">{result.table}</div>
+                    </div>
+                    <div className="flex-1 max-w-[220px] w-full bg-gradient-to-br from-red-700 to-red-600 text-white p-4 md:p-5 rounded-2xl shadow-[0_0_20px_rgba(239,68,68,0.25)] border border-red-500/30 text-center">
+                      <div className="text-xs uppercase font-extrabold tracking-wider opacity-85">LƯỢT THI</div>
+                      <div className="text-4xl md:text-5xl font-black mt-1.5">{result.turn}</div>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-950/70 border border-gold/20 rounded-2xl p-5 text-center text-slate-200 shadow-inner">
+                    <div className="text-gold font-semibold text-xs uppercase tracking-wider mb-2">Địa điểm thi tương ứng:</div>
+                    <div className="text-xl md:text-2xl font-black text-slate-100 leading-relaxed max-w-xl mx-auto">
+                      {result.table === 1
+                        ? "Bàn 1 - Hội trường Trung đoàn"
+                        : "Bàn 2 - Phòng Hồ Chí Minh Tiểu đoàn 2"}
+                    </div>
+                  </div>
+
+                  <div className="pt-1">
+                    <Button
+                      size="lg"
+                      onClick={() => setShowResultModal(false)}
+                      className="w-full sm:w-auto bg-gradient-to-r from-red-700 to-red-600 hover:from-red-600 hover:to-red-500 text-white font-bold px-12 py-3 rounded-xl border border-red-500/20 shadow-lg hover:shadow-red-900/30 transition-all cursor-pointer"
+                    >
+                      ĐỒNG Ý & ĐÓNG
+                    </Button>
+                  </div>
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
